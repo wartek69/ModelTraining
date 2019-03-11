@@ -1,9 +1,12 @@
 import numpy as numpy
 from keras import Sequential, preprocessing
+from keras.callbacks import EarlyStopping
 from keras.layers import LSTM, Dropout, Dense
 from sklearn.preprocessing import MinMaxScaler
 from keras.optimizers import adam
 import matplotlib.pyplot as plt
+
+input_shape_mlp = 6
 
 def parse_csv(filename):
     f = open('data/' + filename)
@@ -14,8 +17,8 @@ def parse_csv(filename):
         print(line[0])
 
 def MLP():
-    dataset = numpy.loadtxt("data/training.data", delimiter=";", comments='#')
-    validation = numpy.loadtxt("data/validation.data", delimiter=";", comments='#')
+    dataset = numpy.loadtxt("data/training4.data", delimiter=";", comments='#')
+    validation = numpy.loadtxt("data/validation7.data", delimiter=";", comments='#')
     print(dataset.shape)
     print(validation.shape)
 
@@ -24,18 +27,18 @@ def MLP():
     dataset_scaled = scaler.fit_transform(dataset)
     validation_scaled = scaler.fit_transform(validation)
 
-    x_train = dataset_scaled[:, 0:6]
-    y_train = dataset_scaled[:, 6:]
+    x_train = dataset_scaled[:, 0:input_shape_mlp]
+    y_train = dataset_scaled[:, input_shape_mlp:]
     print(x_train.shape)
     print(y_train.shape)
 
-    x_test = validation_scaled[:, 0:6]
-    y_test = validation_scaled[:, 6:]
+    x_test = validation_scaled[:, 0:input_shape_mlp]
+    y_test = validation_scaled[:, input_shape_mlp:]
 
 
 
     model = Sequential()
-    model.add(Dense(18, activation='relu', input_dim=6))
+    model.add(Dense(18, activation='relu', input_dim=input_shape_mlp))
     model.add(Dense(18, activation='relu'))
     model.add(Dense(3, activation='relu'))
     model.summary()
@@ -46,12 +49,15 @@ def MLP():
         optimizer=opt,
         metrics=['accuracy']
     )
+    early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
     history = model.fit(x_train,
               y_train,
-              epochs=10,
+              epochs=100,
               validation_data=(x_test, y_test),
-              batch_size=32)
+              batch_size=32, callbacks=[early_stopping])
+
+    model.save('model/mlp_model1.h5')  # creates a HDF5 file
 
     # Plot training & validation accuracy values
     plt.plot(history.history['acc'])
@@ -97,14 +103,16 @@ def LSMT():
     y_test = y_test.reshape(1, 1000, 3)
 
     model = Sequential()
-    model.add(LSTM(128, activation='relu', input_shape=(x_train.shape[1:]), return_sequences=True))
+    model.add(LSTM(6, activation='relu', input_shape=(x_train.shape[1:]), return_sequences=True))
     model.add(Dropout(0.2))
-    model.add(LSTM(3, activation='relu', return_sequences=True))
+    model.add(LSTM(8, activation='relu', return_sequences=True))
+    model.add(Dropout(0.2))
+    #model.add(Dense(32, activation='relu'))
+    #model.add(Dropout(0.2))
+    model.add(Dense(3, activation='relu'))
+
     model.summary()
-    # model.add(Dropout(0.2))
-    # model.add(Dense(32, activation='relu'))
-    # model.add(Dropout(0.2))
-    # model.add(Dense(3, activation='relu'))
+
 
     opt = adam(lr=0.001, decay=1e-6)
 
