@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.optimizers import adam
 import matplotlib.pyplot as plt
 
-input_shape_mlp = 6
+input_shape_mlp = 3
 
 def parse_csv(filename):
     f = open('data/' + filename)
@@ -16,9 +16,18 @@ def parse_csv(filename):
         line = line.strip().split(';')
         print(line[0])
 
+
+def normalize(x_train, x_test):
+    mu = numpy.mean(x_train, axis=0)
+    std = numpy.std(x_train, axis=0)
+    x_train_normalized = (x_train - mu) / std
+    x_test_normalized = (x_test - mu) / std
+    return x_train_normalized, x_test_normalized, mu, std
+
+
 def MLP():
-    dataset = numpy.loadtxt("data/training4.data", delimiter=";", comments='#')
-    validation = numpy.loadtxt("data/validation7.data", delimiter=";", comments='#')
+    dataset = numpy.loadtxt("data/training_less_random_100k.data", delimiter=";", comments='#')
+    validation = numpy.loadtxt("data/validation_less_random_100k.data", delimiter=";", comments='#')
     print(dataset.shape)
     print(validation.shape)
 
@@ -27,43 +36,65 @@ def MLP():
     dataset_scaled = scaler.fit_transform(dataset)
     validation_scaled = scaler.fit_transform(validation)
 
-    x_train = dataset_scaled[:, 0:input_shape_mlp]
-    y_train = dataset_scaled[:, input_shape_mlp:]
+    x_train = dataset[:, 0:input_shape_mlp]
+    y_train = dataset[:, input_shape_mlp:]
     print(x_train.shape)
     print(y_train.shape)
 
-    x_test = validation_scaled[:, 0:input_shape_mlp]
-    y_test = validation_scaled[:, input_shape_mlp:]
-
+    x_test = validation[:, 0:input_shape_mlp]
+    y_test = validation[:, input_shape_mlp:]
+    x_train_standarized, x_test_standarized, mu, std = normalize(x_train, x_test)
 
 
     model = Sequential()
-    model.add(Dense(18, activation='relu', input_dim=input_shape_mlp))
-    model.add(Dense(18, activation='relu'))
-    model.add(Dense(3, activation='relu'))
+    model.add(Dense(3, activation='relu', input_dim=input_shape_mlp))
+    model.add(Dense(24, activation='relu'))
+    model.add(Dense(24, activation='relu'))
+    model.add(Dense(24, activation='relu'))
+
+    model.add(Dense(4, activation='relu'))
     model.summary()
+
     opt = adam(lr=0.001, decay=1e-6)
 
     model.compile(
         loss='mse',
         optimizer=opt,
-        metrics=['accuracy']
+        metrics=['mae']
     )
     early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
-    history = model.fit(x_train,
+    history = model.fit(x_train_standarized,
               y_train,
-              epochs=100,
-              validation_data=(x_test, y_test),
-              batch_size=32, callbacks=[early_stopping])
+              epochs=15,
+              validation_data=(x_test_standarized, y_test),
+              batch_size=32)
+
+    #first normalize data!
+    prediction_data = numpy.reshape(numpy.array([100, 260, -5]), [1, input_shape_mlp])
+    prediction_data_normalized = (prediction_data - mu) / std
+    test = model.predict(prediction_data_normalized)
+
+    prediction_data = numpy.reshape(numpy.array([20.000, 20.000, 9]), [1, input_shape_mlp])
+    prediction_data_normalized = (prediction_data - mu) / std
+    test = model.predict(prediction_data_normalized)
+
+    prediction_data = numpy.reshape(numpy.array([65, 0, 6]), [1, input_shape_mlp])
+    prediction_data_normalized = (prediction_data - mu) / std
+    test = model.predict(prediction_data_normalized)
+
+    prediction_data = numpy.reshape(numpy.array([-140, 100, -7]), [1, input_shape_mlp])
+    prediction_data_normalized = (prediction_data - mu) / std
+    test = model.predict(prediction_data_normalized)
+
 
     model.save('model/mlp_model1.h5')  # creates a HDF5 file
 
     # Plot training & validation accuracy values
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('Model accuracy')
-    plt.ylabel('Accuracy')
+    plt.plot(history.history['mean_absolute_error'])
+    plt.plot(history.history['val_mean_absolute_error'])
+    plt.title('Mean absolute error of model')
+    plt.ylabel('mae')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
     plt.show()
