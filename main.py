@@ -24,7 +24,6 @@ def normalize(x_train, x_test):
     x_test_normalized = (x_test - mu) / std
     return x_train_normalized, x_test_normalized, mu, std
 
-
 def MLP():
     dataset = numpy.loadtxt("data/training_less_random_100k.data", delimiter=";", comments='#')
     validation = numpy.loadtxt("data/validation_less_random_100k.data", delimiter=";", comments='#')
@@ -32,7 +31,7 @@ def MLP():
     print(validation.shape)
 
     # normalize data
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler(feature_range=(-1, 1))
     dataset_scaled = scaler.fit_transform(dataset)
     validation_scaled = scaler.fit_transform(validation)
 
@@ -44,18 +43,17 @@ def MLP():
     x_test = validation[:, 0:input_shape_mlp]
     y_test = validation[:, input_shape_mlp:]
     x_train_standarized, x_test_standarized, mu, std = normalize(x_train, x_test)
-
+    x_train_scaled = scaler.fit_transform(x_train)
+    x_test_scaled = scaler.transform(x_test)
 
     model = Sequential()
-    model.add(Dense(3, activation='relu', input_dim=input_shape_mlp))
+    model.add(Dense(8, activation='relu', input_dim=input_shape_mlp))
     model.add(Dense(24, activation='relu'))
-    model.add(Dense(24, activation='relu'))
-    model.add(Dense(24, activation='relu'))
-
+    model.add(Dense(48, activation='relu'))
     model.add(Dense(4, activation='relu'))
     model.summary()
 
-    opt = adam(lr=0.001, decay=1e-6)
+    opt = adam(lr=0.01, decay=1e-6)
 
     model.compile(
         loss='mse',
@@ -64,28 +62,33 @@ def MLP():
     )
     early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
-    history = model.fit(x_train_standarized,
+    history = model.fit(x_train_scaled,
               y_train,
-              epochs=15,
-              validation_data=(x_test_standarized, y_test),
+              epochs=100,
+              validation_data=(x_test_scaled, y_test),
               batch_size=32)
 
     #first normalize data!
     prediction_data = numpy.reshape(numpy.array([100, 260, -5]), [1, input_shape_mlp])
     prediction_data_normalized = (prediction_data - mu) / std
-    test = model.predict(prediction_data_normalized)
+    prediction_data_scaled = scaler.transform(prediction_data)
+    test = model.predict(prediction_data_scaled)
 
     prediction_data = numpy.reshape(numpy.array([20.000, 20.000, 9]), [1, input_shape_mlp])
     prediction_data_normalized = (prediction_data - mu) / std
-    test = model.predict(prediction_data_normalized)
+    prediction_data_scaled = scaler.transform(prediction_data)
+
+    test = model.predict(prediction_data_scaled)
 
     prediction_data = numpy.reshape(numpy.array([65, 0, 6]), [1, input_shape_mlp])
     prediction_data_normalized = (prediction_data - mu) / std
-    test = model.predict(prediction_data_normalized)
+    prediction_data_scaled = scaler.transform(prediction_data)
+    test = model.predict(prediction_data_scaled)
 
     prediction_data = numpy.reshape(numpy.array([-140, 100, -7]), [1, input_shape_mlp])
     prediction_data_normalized = (prediction_data - mu) / std
-    test = model.predict(prediction_data_normalized)
+    prediction_data_scaled = scaler.transform(prediction_data)
+    test = model.predict(prediction_data_scaled)
 
 
     model.save('model/mlp_model1.h5')  # creates a HDF5 file
