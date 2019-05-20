@@ -3,7 +3,7 @@ This project is used to train a model that approximates a vessel using a multila
 
 # Different models
 This script supports two types of models to be trained. The first one is a black box model, the second on the rotdot model. In the picture below the difference can be seen.
-[[https://github.com/wartek69/ModelTraining.git/master/img/models.png|alt=models]]
+[[https://github.com/wartek69/ModelTraining/blob/master/img/models.png|alt=models]]
 Since the rotdot model is less complex, the training of it is easier.
 The methods that can be used to train respectively the blackbox model and the rotdot model are MLP() and MLP_rotdot()
 
